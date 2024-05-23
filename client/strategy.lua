@@ -40,10 +40,13 @@ CreateThread(function()
                     incapacitate()
                 end
             end
-
         end
 
-        Wait(0)
+        if IsPlayerDead(PlayerId()) and  currentStateType ~= eStateType.Dead then
+            die()
+        end
+
+        Wait(200)
     end
 end)
 
