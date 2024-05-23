@@ -1,0 +1,10 @@
+INCAPACITATION_MIN_TIME_BETWEEN_INCAPACTION_OR_INSTA_KILL = (60000 * 10) --[[ milliseconds ]]
+
+REVIVAL_ANIMATION_DICTIONARY = 'mech_revive@unapproved'
+REVIVAL_ANIMATION_NAME = 'revive'
+
+SELF_REVIVAL_TIME = 3000 --[[ milliseconds ]]
+
+INCAPACITATED_BLEEDOUT_DURATION = 30000 --[[ milliseconds ]]
+
+DEAD_ALLOW_RESPAWN_TIME = 30000 --[[ milliseconds ]]
