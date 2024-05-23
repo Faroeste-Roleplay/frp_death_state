@@ -29,7 +29,9 @@ function onDie()
         N_0x5240864e847c691c(entityId, true)
     end)
 
-    postfxPlay('DeathFailMP01', true)
+    SetTimeout(100, function()
+        postfxPlay('DeathFailMP01')
+    end)
 
     local promptId = PromptBuilder:new()
                     :setControl(`INPUT_PC_FREE_LOOK`)
