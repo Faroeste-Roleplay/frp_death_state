@@ -39,7 +39,7 @@ exports('itemMedicine', function(data, slot)
         ClearSequenceTask(taskSequenceId)
     end)
 
-    exports.nxt_inventory:useItem(data, function(result)
+    exports.ox_inventory:useItem(data, function(result)
 
         RemoveAnimDict(ANIMATION_DICT)
 
