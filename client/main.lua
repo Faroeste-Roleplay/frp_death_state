@@ -3,6 +3,9 @@ local Proxy = module("frp_lib", "lib/Proxy")
 
 cAPI = Proxy.getInterface("API")
 
+TransportManager = Proxy.getInterface("transport")
+TransportServer = Tunnel.getInterface("transport")
+
 gMachine = nil
 
 local gDeathStateChangeMetadata = nil

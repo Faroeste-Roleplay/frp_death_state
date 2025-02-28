@@ -1,5 +1,5 @@
-function SetPlayerIsBeingRevived(playerId, reviverPlayerId)
-    SetPlayerStateBagValue(playerId, 'isBeingRevived', reviverPlayerId or nil, true)
+function SetEntityIsBeingRevivedByThisPlayer(entityId, playerId)
+    SetEntityStateBagValue(entityId, 'isBeingRevived', playerId or nil, true)
 end
 
 function SetPlayerIsRevivingPlayer(playerId, revivingPlayerId)

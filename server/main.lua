@@ -5,13 +5,11 @@ API = Proxy.getInterface("API")
 Inventory = Proxy.getInterface("inventory")
 cAPI = Tunnel.getInterface("API")
 
+TransportManager = Proxy.getInterface("transport")
 
-RegisterCommand("revive", function(source, args)
-    local playerId = args[1]
-    print(" playerId :: ", playerId)
+Server = {}
 
-    TriggerEvent('deathfsm.fire', playerId, 'ReviveByCommand')
-end)
+Proxy.addInterface("death_state", Server)
 
 AddEventHandler('deathfsm.fire', function(playerId, triggerTypeName)
     local triggerType = eTriggerType[triggerTypeName]
@@ -49,18 +47,23 @@ RegisterNetEvent('net.deathfsm.stateChanged', function(stateType, metadata)
 
     if stateType == eStateType.Alive then
 
-        ResetPlayerPotentMedicineStats(Character)
+        ResetPlayerPotentMedicineStats(playerId)
 
         if previousStateType == eStateType.Respawning  then
             --[[ O player respawnou! ]]
 
-            exports.ox_inventory:ClearInventory(playerId)
+            -- exports.ox_inventory:ClearInventory(playerId)
+
+            local playerMoney = exports.ox_inventory:GetItem( playerId, "money", nil, true )
+
+            if playerMoney > 0 then
+                exports.ox_inventory:RemoveItem( playerId, "money", playerMoney )
+            end
         end
     end
 
     if Character:GetSessionVar('deathfsm:noLogging') then
         Character:SetSessionVar('deathfsm:noLogging', false)
-
         return
     end
 
@@ -76,17 +79,20 @@ RegisterNetEvent('net.deathfsm.stateChanged', function(stateType, metadata)
         if playerServerIdKiller then
 
             local UserKiller = API.GetUserFromSource(playerServerIdKiller)
-            local CharacterKiller = UserKiller:GetCharacter()
+            if UserKiller then
+                local CharacterKiller = UserKiller:GetCharacter()
 
-            if CharacterKiller then
+                if CharacterKiller then
 
-                logMessage = logMessage .. (' | "%s" está envolvido'):format(CharacterKiller:GetFullName())
+                    logMessage = logMessage .. (' | "%s" está envolvido'):format(CharacterKiller:GetFullName())
+                end
             end
         end
     end
 
     log:captureMessage(logMessage, scope)
 end)
+
 
 function LoadPlayerState(playerId, Character)
     local characterId = Character:GetId()
@@ -124,6 +130,18 @@ function LoadPlayerState(playerId, Character)
     Character:SetSessionVar('deathfsm:noLogging', true)
 end
 
+
+RegisterNetEvent('FRP:postCharacterInitialization', function() 
+    local playerId = source
+
+    local User = API.GetUserFromSource( playerId )
+
+    local playerId = User:GetSource()
+    local Character = User:GetCharacter()
+
+    LoadPlayerState( playerId, Character )
+end)
+
 CreateThread(function()
 
     --[[ Aguardar o client fazer download do script e inicializar. ]]
@@ -141,163 +159,74 @@ CreateThread(function()
         SetPlayerIsBeingAppliedPotentMedicine(playerId, nil)
         SetPlayerIsApplyingPotentMedicine(playerId, nil)
 
-        ResetPlayerPotentMedicineStats(Character)
+        ResetPlayerPotentMedicineStats(playerId)
     end
 end)
 
-RegisterNetEvent("FRP:onCharacterLoaded", function(User, character_id)
-    local Character = User:GetCharacter()
-    local playerId = User:GetSource()
-
-    LoadPlayerState(playerId, Character)
-end)
-
--- RegisterNetEvent('redem:net.playerLoadedIntoWorld', function()
---     local playerId = source
-
---     local User = API.GetUserFromSource(playerId)
---     local Character = User:GetCharacter()
-
---     LoadPlayerState(playerId, Character)
--- end)
 
 function GetPlayerStateType(Character)
     return Character:GetSessionVar('deathfsm:stateType') or eStateType.Alive
 end
 
-exports('itemTonic', function(event, item, inventory, slot, data)
+RegisterNetEvent('net.game.itemReviverUsed', function(revivedGameobjectNetworkId)
+    local playerId = source
 
-    if event == 'usingItem' then
-        local playerId = inventory.id
-        local User   = API.GetUserFromSource(playerId)
-        local Character = User:GetCharacter()
+	local numRevivers = Inventory.GetItem(playerId, 'tonic_horse_revive', nil, true)
 
-        local playerStateType = GetPlayerStateType(Character)
+	local gameobjectId = NetworkGetEntityFromNetworkId(revivedGameobjectNetworkId)
 
-        local stateLocalized = nil
+	if numRevivers <= 0 then
+		-- SetEntityHealth(gameobjectId, 0)
 
-        if playerStateType == eStateType.Incapacitated then
-            stateLocalized = 'incapacitado'
-        elseif playerStateType == eStateType.Wounded then
-            stateLocalized = 'machucado'
-        elseif playerStateType == eStateType.Dead then
-            stateLocalized = 'morto'
-        end
-        
-        if stateLocalized then
-            cAPI.Notify(playerId, "error", ('Você não pode usar items de cura enquanto estiver %s!'):format(stateLocalized), 5000)
-            return false
-        end
+		-- #TODO: Notificar o player.
 
-        return true
-    end
+		Server.SetEntityGamestate(gameobjectId, 'Dead')
 
-    return true
+		return
+	end
+
+	Inventory.RemoveItem(playerId, 'tonic_horse_revive', 1)
+
+	Server.SetEntityGamestate(gameobjectId, 'Alive')
 end)
 
-exports('reviverItem', function(event, item, inventory, slot, data)
+
+function Server.SetEntityGamestate( gameobjectId, stateName )
+    local state = eStateType[stateName]
     
-    if event == 'buying' then
-        return true
-    end
+    print(" SetEntityGamestate  :: ", gameobjectId, stateName)
 
-    local reviverPlayerId = inventory.id
+    assert(state, ("State(%s) não é válido!"):format(stateName))
 
-    local User   = API.GetUserFromSource(reviverPlayerId)
-    local reviverCharacter = User:GetCharacter()
+    if IsPedAPlayer( gameobjectId ) then
+        local playerId = NetworkGetEntityOwner(gameobjectId)
+        local User = API.GetUserFromSource( playerId )
 
-    if event == 'usingItem' then
-
-        local reviverPlayerStateType = GetPlayerStateType(reviverCharacter)
-
-        local isSelfRevive = reviverPlayerStateType == eStateType.Incapacitated
-
-        local revivedPlayerId = isSelfRevive and reviverPlayerId or nil
-
-        if not isSelfRevive then
-            local reviverPlayerPos = GetEntityCoords(GetPlayerPed(reviverPlayerId))
-    
-            local nearbyIncapacitatedPlayers = { }
-
-            local p = promise.new()
-    
-            local players = API.GetUsers()
-            for userId, User in pairs(players) do
-                local playerId = User:GetSource()
-                local Character = User:GetCharacter()
-    
-                if playerId ~= reviverPlayerId then
-    
-                    local playerPedId = GetPlayerPed(playerId)
-    
-                    if playerPedId ~= 0 then
-    
-                        local isIncapacitated = GetPlayerStateType(Character) == eStateType.Incapacitated
-
-                        if isIncapacitated then
-    
-                            table.insert(nearbyIncapacitatedPlayers,
-                            {
-                                playerId = playerId,
-                                distanceToReviverPlayer = #(GetEntityCoords(playerPedId) - reviverPlayerPos)
-                            })
-                        end
-                    end
-                end
-            end
-
-            p:resolve()
-
-            Citizen.Await(p)
-    
-            table.sort(nearbyIncapacitatedPlayers, function(a, b)
-                return a.distanceToReviverPlayer < b.distanceToReviverPlayer
-            end)
-    
-            local nearestIncapacitatedPlayer = nearbyIncapacitatedPlayers[1]
-    
-            if not nearestIncapacitatedPlayer then
-                return false -- error('Ninguem por perto!')
-            end
-
-            if nearestIncapacitatedPlayer.distanceToReviverPlayer > 1.5 then
-                return false -- error('Player está longe demais!')
-            end
-
-            if IsPlayerMidInteraction(nearestIncapacitatedPlayer.playerId) then
-                return false -- Esse jogador já está sendo revivido!
-            end
-
-            revivedPlayerId = nearestIncapacitatedPlayer.playerId
+        if not User then
+            return
         end
 
-        if not revivedPlayerId then
-            return false -- error('ninguem para ser revivido')
+        local trigger = nil
+
+        if state == eStateType.Alive then
+            trigger = eTriggerType.Revive
+        elseif state == eStateType.Dead then
+            trigger = eTriggerType.Die
         end
 
-        SetPlayerIsBeingRevived(revivedPlayerId, true)
+        if trigger then
+            TriggerClientEvent('net.deathfsm.fire', playerId, trigger)
+        end
+    else
+        local transport = TransportManager.GetTransportByEntity(gameobjectId)
 
-        reviverCharacter:SetSessionVar('playerIdBeingRevivedByMe', revivedPlayerId)
+        print(" transport :: ", transport)
 
-        return true
-    end
-
-    if event == 'usedItem' then
-
-        local playerIdBeingRevived = reviverCharacter:GetSessionVar('playerIdBeingRevivedByMe')
-
-        if not playerIdBeingRevived then
-            return false
+        if not transport then
+            return
         end
 
-        SetPlayerIsBeingRevived(playerIdBeingRevived, false)
-
-        reviverCharacter:SetSessionVar('playerIdBeingRevivedByMe', nil)
-
-        TriggerClientEvent('net.deathfsm.fire', playerIdBeingRevived, eTriggerType.Revive)
-
-        return true
+        TransportManager.SetTransportDeathState(transport.transportId, state)
+        transport:SetStatebagKey("transport:change_deathstate", state, true)
     end
-
-    return false
-end)
+end

@@ -50,12 +50,22 @@ CreateThread(function()
     end
 end)
 
-AddEventHandler('gameEvent', function(eventName, eventData)
-    if eventName == "EVENT_NETWORK_DAMAGE_ENTITY" then
-        print(" EVENT_NETWORK_DAMAGE_ENTITY :: ", json.encode(eventData, {indent=true}))
-    elseif eventName == "EVENT_NETWORK_INCAPACITATED_ENTITY" then
-        print(" EVENT_NETWORK_INCAPACITATED_ENTITY :: ", json.encode(eventData, {indent=true}))
+local gCurrentHeight = 0
 
+AddEventHandler('gameEvent', function(eventName, eventData)
+
+    if eventName == 'EVENT_CARRIABLE_UPDATE_CARRY_STATE' then
+        -- local CarriableEntityId = eventData.CarriableEntityId
+
+        -- print(" EVENT_CARRIABLE_UPDATE_CARRY_STATE :: ", CarriableEntityId, PlayerPedId())
+        
+        -- if CarriableEntityId == PlayerPedId() then
+        --     cAPI.SetPlayerScale()
+        -- end
+    elseif eventName == "EVENT_NETWORK_DAMAGE_ENTITY" then
+        
+    elseif eventName == "EVENT_NETWORK_INCAPACITATED_ENTITY" then
+        
     elseif eventName == "EVENT_ENTITY_DAMAGED" then
         local playerPed = eventData.damagedEntityId
         
@@ -64,12 +74,11 @@ AddEventHandler('gameEvent', function(eventName, eventData)
         end
 
     elseif eventName == "EVENT_INCAPACITATED" then
-        print(" EVENT_INCAPACITATED :: ", json.encode(eventData, {indent=true}))
+        
     end
 end)
 
 AddEventHandler('game.networkDamageEntity', function(event)
-    print(" game.networkDamageEntity :: ")
 
     if not gMachine then
         return
@@ -111,8 +120,6 @@ AddEventHandler('game.networkDamageEntity', function(event)
 
         return
     end
-
-    print(" victimIncapacitated :: ", victimIncapacitated)
 
     if victimIncapacitated then
         

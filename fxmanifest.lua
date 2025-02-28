@@ -4,7 +4,7 @@ game 'rdr3'
 
 lua54 'yes'
 
-use_experimental_fxv2_oal 'yes'
+-- use_experimental_fxv2_oal 'yes'
 
 rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aware my resources *will* become incompatible once RedM ships.'
 
@@ -17,9 +17,19 @@ shared_scripts {
 
     'shared/helpers.lua',
 
-    'shared/statebag.lua',
-    'shared/statebag_interaction_revive.lua',
-    'shared/statebag_interaction_apply_medicine.lua',
+    -- 'shared/statebag.lua',
+    -- 'shared/statebag_interaction_revive.lua',
+    -- 'shared/statebag_interaction_apply_medicine.lua',
+
+    
+	'item-impl/statebag.lua',
+	'item-impl/item_interaction.lua',
+
+	--[[ item : medicine ]]
+	'item-impl/item-medicine/state_applying_medicine.lua',
+
+	--[[ item : reviver ]]
+	'item-impl/item-reviver/state_reviving.lua',
 }
 
 server_scripts {
@@ -28,12 +38,25 @@ server_scripts {
     
     'server/helpers.lua',
 
-    'server/statebag_interaction_revive.lua',
-    'server/statebag_interaction_apply_medicine.lua',
+    -- 'server/statebag_interaction_revive.lua',
+    -- 'server/statebag_interaction_apply_medicine.lua',
 
     'server/item_medicine.lua',
 
     'server/main.lua',
+
+    	--[[ item : medicine ]]
+	'item-impl/item-medicine/server_state_applying_medicine.lua',
+	'item-impl/item-medicine/server_item_medicine.lua',
+
+	--[[ item : reviver ]]
+	'item-impl/item-reviver/server_state_reviving.lua',
+	'item-impl/item-reviver/server_item_reviver.lua',
+
+	--[[ item : tonics ]]
+	'item-impl/item-tonic/server_item_tonic.lua',
+
+	'item-impl/server_main.lua',
 }
 
 client_scripts {
@@ -54,8 +77,17 @@ client_scripts {
 
     'client/strategy.lua',
 
-    'client/revive_item.lua',
-    'client/item_medicine.lua',
+    -- 'client/revive_item.lua',
+    -- 'client/item_medicine.lua',
 
     'client/main.lua',
+
+    'client/gamestateDeathStrategy.lua',
+
+    
+	--[[ item : medicine ]]
+	'item-impl/item-medicine/client_item_medicine.lua',
+
+	--[[ item : reviver ]]
+	'item-impl/item-reviver/client_item_reviver.lua',
 }

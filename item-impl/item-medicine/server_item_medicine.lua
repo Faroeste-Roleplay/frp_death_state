@@ -6,18 +6,11 @@ exports('itemMedicine', function(event, item, inventory, slot, data)
     local User = API.GetUserFromSource(playerId)
     local Character = User:GetCharacter()
 
-    -- local playerJobName = player.getJobName()
-
-    -- if not playerJobName or (playerJobName ~= 'doctor' and playerJobName ~= 'doctorchefe' and not playerJobName:find('indio')) then
-    --     TriggerClientEvent('texas:notify:native', playerId, 'Somente médicos podem usar este item!', 5000)
-    --     return false
-    -- end
-
     local playerStateType = GetPlayerStateType(Character)
 
     if event == 'usingItem' then
         if playerStateType ~= eStateType.Alive then
-            cAPI.Notify(playerId, "error", 'Você precisa estar vivo!', 5000)
+            cAPI.Notify(playerId, "error", 'Você não pode tomar isso sozinho caso esteja machucado', 5000)
             return false
         end
 
@@ -30,7 +23,7 @@ exports('itemMedicine', function(event, item, inventory, slot, data)
         end)
 
         local nearestWoundedPlayer = nearestWoundedPlayers[1]
-
+        
         if not nearestWoundedPlayer then
             cAPI.Notify(playerId, "error", 'Nenhum jogador machucado por perto!', 5000)
             return false
@@ -46,12 +39,12 @@ exports('itemMedicine', function(event, item, inventory, slot, data)
         local victimPlayerId = victimPlayer:GetSource()
 
         if IsPlayerMidInteraction(victimPlayerId) then
-            cAPI.Notify(playerId, "error", 'Você não pode usar esse item agora!', 5000)
+            TriggerClientEvent('texas:notify:native', playerId, 'Você não pode usar esse item agora!', 5000)
             return false
         end
 
-        if not CanPlayerBeAppliedPotentMedicine(victimPlayer) then
-            cAPI.Notify(playerId, "error", 'Aguarde um momento antes de tentar medicar este jogador!', 5000)
+        if not CanPlayerBeAppliedPotentMedicine(victimPlayerId) then
+            TriggerClientEvent('texas:notify:native', playerId, 'Aguarde um momento antes de tentar medicar este jogador!', 5000)
             return false
         end
 
@@ -66,9 +59,11 @@ exports('itemMedicine', function(event, item, inventory, slot, data)
 
         local victimPlayer = API.GetUserFromSource(victimPlayerId)
 
-        ClearApplyPotentMedicineInteraction(Character, victimPlayerId)
+        ClearApplyPotentMedicineInteraction(player, victimPlayerId)
+        
+        local victimCharacter = victimPlayer:GetCharacter()
 
-        local victimPlayerStateType = GetPlayerStateType(victimPlayer)
+        local victimPlayerStateType = GetPlayerStateType(victimCharacter)
 
         if playerStateType ~= eStateType.Alive then
             cAPI.Notify(playerId, "error", 'Você precisa estar vivo!', 5000)
@@ -78,32 +73,34 @@ exports('itemMedicine', function(event, item, inventory, slot, data)
             cAPI.Notify(playerId, "error", 'Este jogador não mais machucado!', 5000)
             return false
         end
-        if not CanPlayerBeAppliedPotentMedicine(victimPlayer) then
+        if not CanPlayerBeAppliedPotentMedicine(victimCharacter) then
             cAPI.Notify(playerId, "error", 'Aguarde um momento antes de tentar medicar este jogador!', 5000)
             return false
         end
 
-        IncreasePlayerPotentMedicineStats(victimPlayer)
+        IncreasePlayerPotentMedicineStats(victimPlayerId)
 
         TriggerClientEvent('net.changePlayerHealth', victimPlayerId, 50.0)
 
-        local item = exports.ox_inventory:GetSlot(playerId, slot)
+        -- local inventoryId = glow:GetSessionCharacterInventory()
 
-        local totalDurabilityTimeInSeconds = item.metadata.degrade * 60
+        -- local item = exports.ox_inventory:GetSlot(playerId, slot)
 
-        --[[
-            Sempre remover 50% da durabilidade total;
-            Faz com que o item seja usável no máximo 2 vezes.
-        ]]
-        local newDurabilityStamp = item?.metadata?.durability - (totalDurabilityTimeInSeconds / 2)
+        -- local totalDurabilityTimeInSeconds = item.metadata.degrade * 60
 
-        --[[ Remover 50% da durabilidade a cada uso ]]
-        exports.ox_inventory:SetDurability(playerId, slot, newDurabilityStamp)
+        -- --[[
+        --     Sempre remover 50% da durabilidade total;
+        --     Faz com que o item seja usável no máximo 2 vezes.
+        -- ]]
+        -- local newDurabilityStamp = item?.metadata?.durability - (totalDurabilityTimeInSeconds / 2)
+
+        -- --[[ Remover 50% da durabilidade a cada uso ]]
+        -- exports.ox_inventory:SetDurability(playerId, slot, newDurabilityStamp)
         
-        if newDurabilityStamp > os.time() then
-            --[[ Não consumir caso ainda tenha durabilidade ]]
-            return false
-        end
+        -- if newDurabilityStamp > os.time() then
+        --     --[[ Não consumir caso ainda tenha durabilidade ]]
+        --     return false
+        -- end
 
         --[[ Consumir o item depois de usar 2 vezes ]]
         return true
@@ -116,8 +113,8 @@ exports('itemMedicine', function(event, item, inventory, slot, data)
     return false
 end)
 
-function CanPlayerBeAppliedPotentMedicine(player)
-    local timePotentMedicineLastTaken = GetPlayerTimeLastTakenPotentMedicine(player)
+function CanPlayerBeAppliedPotentMedicine(playerId)
+    local timePotentMedicineLastTaken = GetPlayerTimeLastTakenPotentMedicine(playerId)
 
     if timePotentMedicineLastTaken and GetGameTimer() - timePotentMedicineLastTaken < (POTENT_MEDICINE_APPLY_COOLDOWN * 1000) then
         return false
@@ -142,25 +139,21 @@ function ClearApplyPotentMedicineInteraction(player, victimPlayerId)
     SetPlayerIsApplyingPotentMedicine(playerId, nil)
 end
 
-function IncreasePlayerPotentMedicineStats(player)
-    player:SetSessionVar('deathfsm:timePotentMedicineLastTaken', GetGameTimer())
+function IncreasePlayerPotentMedicineStats(playerId)
+    Player(playerId).state:set('deathfsm:timePotentMedicineLastTaken', GetGameTimer(), false)
 
     --[[
     local numPotentMedicineTaken = player.getSessionVar('deathfsm:numPotentMedicineTaken') or 0
-
     numPotentMedicineTaken += 1
-
     player.setSessionVar('deathfsm:numPotentMedicineTaken', numPotentMedicineTaken)
-
     return numPotentMedicineTaken
     --]]
 end
 
-function ResetPlayerPotentMedicineStats(player)
-    player:SetSessionVar('deathfsm:timePotentMedicineLastTaken', nil)
-    -- player.setSessionVar('deathfsm:numPotentMedicineTaken', nil)
+function ResetPlayerPotentMedicineStats(playerId)
+    Player(playerId).state:set('deathfsm:timePotentMedicineLastTaken', nil, false)
 end
 
-function GetPlayerTimeLastTakenPotentMedicine(player)
-    return player:GetSessionVar('deathfsm:timePotentMedicineLastTaken')
+function GetPlayerTimeLastTakenPotentMedicine(playerId)
+    return Player(playerId).state['deathfsm:timePotentMedicineLastTaken']
 end

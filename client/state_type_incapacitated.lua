@@ -8,6 +8,7 @@ function onIncapacitate()
     -- IsPedIncapacitated
     if N_0xb655db7582aec805(entityId) == 0 then
         SetEntityHealth(entityId, 0)
+        ApplyDamageToPed(entityId, GetEntityHealth(entityId), 1, -1, 0)
     end
 
     postfxPlay('MP_Downed')

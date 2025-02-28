@@ -1,5 +1,5 @@
-function IsPlayerBeingRevived(playerServerId)
-    return GetPlayerStateBagValue(playerServerId, 'isBeingRevived') ~= nil
+function IsEntityBeingRevived(entityId)
+    return GetEntityStateBagValue(entityId, 'isBeingRevived') ~= nil
 end
 
 function IsPlayerReviving(playerServerId)

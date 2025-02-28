@@ -4,8 +4,7 @@ local ANIMATION_NAME = 'sample_high'
 exports('itemMedicine', function(data, slot)
 
     if IsPlayerMidInteraction(-1) then
-        cAPI.Notify("error", 'Você não pode usar esse item agora!', 5000)
-        return
+        return TriggerEvent('texas:notify:native', 'Você não pode usar esse item agora!', 5000)
     end
 
     RequestAnimDict(ANIMATION_DICT)
@@ -51,6 +50,11 @@ exports('itemMedicine', function(data, slot)
 
         ClearPedTasks(playerPedId, false, false)
     end)
+end)
+
+RegisterNetEvent('net.changePlayerHealth', function(changeValue)
+	-- ChangeEntityHealth
+	N_0x835f131e7dc8f97a(PlayerPedId(), changeValue, 0, 0)
 end)
 
 local gIsBeingAppliedPotentMedicine

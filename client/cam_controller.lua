@@ -20,6 +20,7 @@ function startPreviewUsingOrbitalCam(entity)
             while gOrbitalCamPreviewIsEnabled do
                 Wait(0)
                 DisableControlAction(0, 24, true)
+                SetOrbitalCamLookAtPosition(GetEntityCoords(entity))
             end
         end)
 
